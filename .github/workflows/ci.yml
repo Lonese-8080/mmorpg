@@ -104,7 +104,6 @@ jobs:
             -c Release --no-restore --nologo \
             --collect:"XPlat Code Coverage" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura \
-            --results-directory ./TestResults/Unit \
             --logger "trx;LogFileName=UnitTests.trx" \
             -- -parallel none
 
@@ -114,9 +113,16 @@ jobs:
             -c Release --no-restore --nologo \
             --collect:"XPlat Code Coverage" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura \
-            --results-directory ./TestResults/Integration \
             --logger "trx;LogFileName=IntegrationTests.trx" \
             -- -parallel none
+
+      - name: Collect Test Results
+        if: always()
+        run: |
+          mkdir -p TestResults/trx
+          find . -name "*.trx" -type f -exec cp {} TestResults/trx/ \;
+          echo "已收集的 .trx 文件:"
+          ls -la TestResults/trx/ || echo "未找到 .trx 文件"
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -182,7 +188,7 @@ jobs:
         with:
           name: test-results-${{ github.run_id }}
           path: |
-            TestResults/**/*.trx
+            TestResults/trx/**/*.trx
             TestResults/coverage/merged/**
           if-no-files-found: error
           retention-days: 30
@@ -192,9 +198,10 @@ jobs:
         uses: dorny/test-reporter@v1
         with:
           name: Test Results
-          path: TestResults/**/*.trx
+          path: TestResults/trx/*.trx
           reporter: dotnet-trx
           fail-on-error: false
+          fail-on-empty: false
 
   # ----------------------------------------------------------------
   # 3. BenchmarkDotNet 性能基线
