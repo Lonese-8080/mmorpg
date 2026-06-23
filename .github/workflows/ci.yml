@@ -138,7 +138,7 @@ jobs:
         if: always()
         uses: dorny/test-reporter@v1
         with:
-          name: Test Results (${{ matrix.os }})
+          name: Test Results
           path: TestResults/**/*.trx
           reporter: dotnet-trx
           fail-on-error: true
