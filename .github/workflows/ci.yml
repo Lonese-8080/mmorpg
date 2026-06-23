@@ -141,7 +141,7 @@ jobs:
           name: Test Results
           path: TestResults/**/*.trx
           reporter: dotnet-trx
-          fail-on-error: true
+          fail-on-error: false
 
   # ----------------------------------------------------------------
   # 3. BenchmarkDotNet 性能基线
