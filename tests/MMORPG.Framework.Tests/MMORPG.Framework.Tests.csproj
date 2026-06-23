@@ -7,6 +7,8 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- 禁用 xUnit 分析器警告 - 测试代码中允许使用 .Wait() -->
+    <NoWarn>$(NoWarn);xUnit1031;xUnit1032</NoWarn>
     <!-- Coverlet 覆盖率配置 -->
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
