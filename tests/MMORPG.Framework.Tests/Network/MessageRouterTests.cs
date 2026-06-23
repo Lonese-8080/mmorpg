@@ -95,12 +95,10 @@ public class MessageRouterTests
     {
         // Arrange
         var router = new MessageRouter();
-        var wasCalled = false;
 
         // Act
         router.RegisterHandler(MessageIds.C2S_Heartbeat, (session, message) =>
         {
-            wasCalled = true;
             return Task.CompletedTask;
         });
 

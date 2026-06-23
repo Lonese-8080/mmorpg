@@ -144,12 +144,11 @@ public class GameSchedulerTests
         // Arrange
         var scheduler = new GameScheduler(200);
         var frameCount = 0;
-        var exceptionCount = 0;
 
         // 在奇数帧抛出异常
         scheduler.OnUpdate += _ =>
         {
-            frameCount++;
+            Interlocked.Increment(ref frameCount);
 
             if (frameCount % 2 == 1)
                 throw new InvalidOperationException("测试异常");

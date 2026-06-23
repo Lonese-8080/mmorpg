@@ -35,13 +35,13 @@ public class TcpServerLifecycleTests
     }
 
     [Fact(Timeout = 10000)]
-    public async Task Dispose_Stops_Server()
+    public async Task DisposeAsync_Stops_Server()
     {
         var port = GetFreePort();
         var server = new TcpServer(new TcpServerOptions { Port = port, Backlog = 8, MaxConnections = 10 });
         await server.StartAsync();
         Assert.True(server.IsRunning);
-        server.Dispose();
+        await server.DisposeAsync();
         Assert.False(server.IsRunning);
     }
 
