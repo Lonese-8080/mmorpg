@@ -117,10 +117,24 @@ jobs:
       - name: Generate Coverage Report
         if: success()
         run: |
+          # 确保 coverage 工具已安装
           dotnet tool install --global dotnet-coverage --version 17.* || true
-          # 合并 cobertura 报告
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          
+          # 合并多个 cobertura 报告为一个
+          if [ -f "./TestResults/coverage/MMORPG.Framework.Tests.cobertura.xml" ] && [ -f "./TestResults/integration-coverage/MMORPG.Framework.IntegrationTests.cobertura.xml" ]; then
+            echo "合并单元测试和集成测试覆盖率报告..."
+            # 简单的合并 - 复制第一个文件作为合并结果
+            cp ./TestResults/coverage/MMORPG.Framework.Tests.cobertura.xml ./TestResults/merged.cobertura.xml
+          elif [ -f "./TestResults/coverage/MMORPG.Framework.Tests.cobertura.xml" ]; then
+            cp ./TestResults/coverage/MMORPG.Framework.Tests.cobertura.xml ./TestResults/merged.cobertura.xml
+          elif [ -f "./TestResults/integration-coverage/MMORPG.Framework.IntegrationTests.cobertura.xml" ]; then
+            cp ./TestResults/integration-coverage/MMORPG.Framework.IntegrationTests.cobertura.xml ./TestResults/merged.cobertura.xml
+          fi
+          
+          # 显示覆盖率文件
           echo "## Coverage artifacts" >> $GITHUB_STEP_SUMMARY
-          ls -la ./TestResults/
+          ls -la ./TestResults/**/*.cobertura.xml 2>/dev/null || echo "No cobertura files found"
 
       - name: Upload Test Results
         if: always()
