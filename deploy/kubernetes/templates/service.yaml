@@ -1,0 +1,31 @@
+# Service Template
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mmorpg-framework.fullname" . }}
+  labels:
+    {{- include "mmorpg-framework.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.service.tcpPort }}
+      targetPort: tcp
+      protocol: TCP
+      name: tcp
+    - port: {{ .Values.service.prometheusPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "mmorpg-framework.selectorLabels" . | nindent 4 }}

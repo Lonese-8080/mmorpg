@@ -1,0 +1,67 @@
+# ============================================================
+# Publish — 手动发布到 GitHub Releases & NuGet
+# 触发：手动 (workflow_dispatch) 或推送 v*.*.* tag
+# ============================================================
+
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如 2.2.1)'
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Build & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Determine version
+        id: ver
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${{ inputs.version }}
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+
+      - name: Pack
+        run: |
+          dotnet pack src/MMORPG.Framework/MMORPG.Framework.csproj \
+            -c Release \
+            -o ./artifacts \
+            -p:Version=${{ steps.ver.outputs.VERSION }} \
+            -p:PackageVersion=${{ steps.ver.outputs.VERSION }} \
+            --no-restore
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmorpg-framework-${{ steps.ver.outputs.VERSION }}
+          path: ./artifacts/*.nupkg
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/*.nupkg
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') }}

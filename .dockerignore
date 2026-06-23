@@ -1,0 +1,25 @@
+# Docker 构建/运行忽略列表
+# 大幅减小构建上下文，加快构建速度
+**/bin/
+**/obj/
+**/out/
+**/*.user
+**/.vs/
+**/.idea/
+**/.vscode/
+**/.git/
+**/.gitignore
+**/Dockerfile*
+**/docker-compose*
+**/README.md
+**/docs/
+**/logs/
+**/*.log
+**/TestResults/
+**/coverage*/
+**/.coverage*
+**/TestPlans/
+**/.DS_Store
+**/Thumbs.db
+**/*.tmp
+**/*.swp

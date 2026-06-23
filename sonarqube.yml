@@ -1,0 +1,100 @@
+# SonarQube 代码质量扫描配置
+#
+# 使用方式：
+# 1. 在 SonarQube 服务器上创建项目
+# 2. 设置环境变量：SONAR_TOKEN（从 SonarQube 生成）
+# 3. 运行：dotnet sonarscanner begin /k:"MMORPG_Framework" /d:sonar.host.url="https://sonar.example.com"
+#    dotnet build
+#    dotnet sonarscanner end
+#
+# 或通过 CI 自动化（见 .github/workflows/sonarqube.yml）
+
+sonar:
+  # 项目唯一标识
+  projectKey: MMORPG_Framework
+  
+  # 项目名称
+  projectName: MMORPG.Framework
+  
+  # 项目版本（建议从 Git tag 自动获取）
+  projectVersion: 1.0.0
+  
+  # SonarQube 服务器地址
+  hostUrl: https://sonar.example.com
+  
+  # 源代码目录
+  sources: src
+  
+  # 测试代码目录（不计入覆盖率统计）
+  tests: tests
+  
+  # 排除目录
+  exclusions:
+    - "**/bin/**"
+    - "**/obj/**"
+    - "**/*.Tests.csproj"
+    - "**/benchmarks/**"
+  
+  # 覆盖率报告路径（由 dotnet test --collect coverage 生成）
+  coverageReports:
+    - "**/coverage.opencover.xml"
+  
+  # 质量门禁阈值（低于此值则 CI 失败）
+  qualityGate:
+    # 新代码覆盖率阈值
+    newCodeCoverageThreshold: 80
+    
+    # 整体覆盖率阈值
+    overallCoverageThreshold: 70
+    
+    # 新代码重复率阈值
+    newCodeDuplicationThreshold: 3
+    
+    # 新代码技术债务阈值（分钟）
+    newCodeTechnicalDebtThreshold: 30
+    
+    # 新代码阻断器数量阈值（必须为 0）
+    newCodeBlockersThreshold: 0
+    
+    # 新代码严重问题数量阈值
+    newCodeCriticalsThreshold: 0
+    
+    # 新代码主要问题数量阈值
+    newCodeMajorThreshold: 10
+
+# 代码分析规则配置
+rules:
+  # 启用的规则集
+  profiles:
+    - "Sonar way"  # SonarQube 默认推荐规则集
+  
+  # 自定义规则排除（某些规则可能不适合游戏框架）
+  exclusions:
+    - "csharpsquid:S100"   # 方法名应该以小写字母开头（游戏框架常使用 PascalCase）
+    - "csharpsquid:S101"   # 类名应该以大写字母开头（已遵循）
+    - "csharpsquid:S1109"  # 文件末尾应该有换行符（不影响功能）
+  
+  # 自定义规则启用（额外检查）
+  additional:
+    - "csharpsquid:S2222"  # volatile 字段应该被正确使用
+    - "csharpsquid:S2346"  # 枚举成员命名规范
+    - "csharpsquid:S2930"  # IDisposable 实现
+    - "csharpsquid:S2931"  # IDisposable 应实现 Dispose(bool)
+    - "csharpsquid:S2933"  # 字段应该初始化
+    - "csharpsquid:S3267"  # 循环应该简化
+    - "csharpsquid:S3928"  # ArgumentException 参数名检查
+    - "csharpsquid:S3966"  # Dispose 应只调用一次
+    - "csharpsquid:S4462"  # CancellationToken 应传递给异步方法
+
+# 安全热点配置
+security:
+  # 启用安全热点扫描
+  enabled: true
+  
+  # 安全规则集
+  profiles:
+    - "OWASP Top 10"
+    - "CWE Top 25"
+  
+  # 安全热点阈值（发现安全热点时 CI 失败）
+  hotspotsThreshold: 0

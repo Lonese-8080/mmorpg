@@ -1,0 +1,289 @@
+# MMORPG Framework OpenAPI Specification
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+openapi: 3.0.3
+info:
+  title: MMORPG Framework API
+  description: |
+    MMORPG Framework HTTP API for game server management, monitoring, and testing.
+    
+    ## Authentication
+    
+    Some endpoints require authentication via API Key. Include the API Key in the `X-API-Key` header:
+    
+    ```
+    X-API-Key: your-api-key
+    ```
+    
+    ## Rate Limiting
+    
+    API requests are rate-limited to prevent abuse:
+    - 100 requests per minute for authenticated endpoints
+    - 20 requests per minute for unauthenticated endpoints
+  version: 1.0.0
+  contact:
+    name: MMORPG Framework Contributors
+    email: mmorpg@example.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: http://production.example.com:8080
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Metrics
+    description: Monitoring and metrics endpoints
+  - name: Testing
+    description: Framework testing endpoints
+  - name: Configuration
+    description: Configuration management endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health Check
+      description: |
+        Returns the health status of the game server framework.
+        
+        Checks the health of:
+        - Network layer (TCP server)
+        - Metrics system
+        - Game scheduler
+        
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Server is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /metrics:
+    get:
+      tags:
+        - Metrics
+      summary: Prometheus Metrics
+      description: |
+        Returns metrics in Prometheus exposition format.
+        
+        Includes:
+        - HTTP request counters and histograms
+        - Network connection metrics
+        - Game scheduler FPS metrics
+        - Custom business metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP mmorpg_http_requests_total Total HTTP requests
+                  # TYPE mmorpg_http_requests_total counter
+                  mmorpg_http_requests_total{method="GET",endpoint="/health"} 42
+
+  /test/run:
+    get:
+      tags:
+        - Testing
+      summary: Run All Tests
+      description: |
+        Triggers all framework tests to run.
+        
+        Requires API Key authentication.
+        
+        Tests include:
+        - Network (TCP connections, message handling)
+        - Metrics (Counter, Histogram, Gauge)
+        - CircuitBreaker (failure handling)
+        - RateLimiter (rate limiting)
+        - SnowflakeId (ID generation)
+        - GameScheduler (frame rate stability)
+        - ConfigHotReload (configuration updates)
+        - MessageChannel (concurrent messaging)
+        - Serializer (message serialization)
+        - HealthCheck (health monitoring)
+      operationId: runTests
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Tests completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResults'
+        '401':
+          description: Unauthorized - Invalid or missing API Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /test/results:
+    get:
+      tags:
+        - Testing
+      summary: Get Test Results
+      description: |
+        Returns the results of the most recent test run.
+        
+        Results are cached and updated after each test run.
+        Includes individual test results with pass/fail status, duration, and messages.
+      operationId: getTestResults
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResults'
+
+  /test/connect:
+    get:
+      tags:
+        - Testing
+      summary: Network Connection Test
+      description: |
+        Opens a TCP connection to test network functionality.
+        
+        Establishes a test connection to the game server's TCP port.
+      operationId: testConnection
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestResult'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key for authenticated endpoints
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Healthy, Degraded, Unhealthy]
+          description: Overall health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of health check
+        checks:
+          type: object
+          properties:
+            network:
+              type: string
+              enum: [Healthy, Unhealthy]
+            metrics:
+              type: string
+              enum: [Healthy, Unhealthy]
+            scheduler:
+              type: string
+              enum: [Healthy, Unhealthy]
+          description: Individual component health checks
+
+    TestResults:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of tests
+          example: 10
+        passed:
+          type: integer
+          description: Number of passed tests
+          example: 9
+        failed:
+          type: integer
+          description: Number of failed tests
+          example: 1
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of test run
+        tests:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestResult'
+
+    TestResult:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Test name
+          example: CircuitBreaker
+        passed:
+          type: boolean
+          description: Whether the test passed
+          example: true
+        durationMs:
+          type: integer
+          description: Test duration in milliseconds
+          example: 650
+        message:
+          type: string
+          description: Test result message
+          example: 熔断器正常: 触发打开，状态=HalfOpen
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of test completion
+
+    ConnectionTestResult:
+      type: object
+      properties:
+        connected:
+          type: boolean
+          description: Whether connection was successful
+          example: true
+        latencyMs:
+          type: integer
+          description: Connection latency in milliseconds
+          example: 5
+        message:
+          type: string
+          description: Connection result message
+          example: Connection successful
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: Unauthorized
+        message:
+          type: string
+          description: Error message
+          example: Invalid API Key
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp

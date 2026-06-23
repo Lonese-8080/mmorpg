@@ -1,0 +1,63 @@
+# Trivy Security Scanner Configuration
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+# Trivy Configuration
+# https://aquasecurity.github.io/trivy/latest/
+
+# Scan settings
+scan:
+  # Scan speed
+  speed: 10M
+  
+  # Parallelism
+  parallelism: 4
+  
+  # Cache settings
+  cache:
+    backend: "fs"
+    ttl: 24h
+
+# Vulnerability detection
+vulnerability:
+  # Severity threshold (CRITICAL, HIGH, MEDIUM, LOW, UNKNOWN)
+  severity: "HIGH"
+  
+  # Security advisories
+  offline: false
+
+# Security checks
+security:
+  # Enable security checks
+  enabled: true
+  
+  # Include non-fixable vulnerabilities
+  include-non-fixable: false
+
+# Image scanning
+image:
+  # Pull policy
+  pull-policy: "IfNotPresent"
+  
+  # Registry authentication
+  registry:
+    insecure: false
+
+# Format output
+format: "table"
+output: "results.txt"
+
+# Exit code
+exit-code: 1  # Exit with code 1 for vulnerabilities found
+
+# Ignore unfixed vulnerabilities (not recommended for production)
+ignore-unfixed: false
+
+# Security checks to run
+checks:
+  - vuln
+  - config
+  - secret
+
+# Severity for exit code
+# CRITICAL: exit 1, HIGH: exit 1, others: exit 0

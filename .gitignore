@@ -1,0 +1,72 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio
+.vs/
+*.vssscc
+.vscode/
+
+# Rider
+.idea/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Benchmark results
+benchmarks/**/BenchmarkDotNet.Artifacts/
+
+# Build outputs
+publish/
+out/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Package directories
+packages/
+
+# Logs
+logs/
+*.log
+
+# Configuration (if containing secrets)
+# config/appsettings.*.json
+
+# Docker
+*.tar
+*.tar.gz
+
+# OS files
+Thumbs.db
+.DS_Store
+Desktop.ini
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Kubernetes
+deploy/kubernetes/charts/
+deploy/kubernetes/Chart.lock
+
+# CI
+.github/actions/

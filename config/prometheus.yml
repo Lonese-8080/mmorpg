@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  # ============ 游戏服务器指标 ============
+  - job_name: 'mmorpg-gameserver'
+    static_configs:
+      - targets: ['gameserver:8080']
+        labels:
+          service: mmorpg-gameserver
+          env: production
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # ============ Redis 指标（通过 Redis Exporter） ============
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+        labels:
+          service: redis
+    scrape_interval: 30s
+
+  # ============ Prometheus 自身 ============
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ============ Jaeger 组件 ============
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']  # Jaeger Collector
+
+  # ============ cAdvisor（容器指标，可选） ============
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s

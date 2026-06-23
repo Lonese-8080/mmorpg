@@ -1,0 +1,178 @@
+// common.proto
+// 框架层通用消息定义
+// 所有游戏都会用到的基本消息
+
+syntax = "proto3";
+
+package MMORPG.Common;
+
+option csharp_namespace = "MMORPG.Framework.Network";
+
+// ============================================================
+// 框架层消息 ID: 0x0000 - 0x0FFF
+// ============================================================
+
+// ----------------------------------------
+// 登录相关 (0x0001 - 0x001F)
+// ----------------------------------------
+
+/// 客户端登录请求
+message C2S_Login
+{
+    /// 账号
+    string account = 1;
+    
+    /// 密码（加盐哈希后）
+    string password = 2;
+    
+    /// 客户端版本
+    string client_version = 3;
+    
+    /// 平台（iOS/Android/PC）
+    string platform = 4;
+}
+
+/// 服务器登录响应
+message S2C_LoginResult
+{
+    /// 是否成功
+    bool success = 1;
+    
+    /// 错误码（success=false 时填充）
+    int32 error_code = 2;
+    
+    /// 错误消息
+    string error_message = 3;
+    
+    /// 玩家ID（success=true 时填充）
+    int64 player_id = 4;
+    
+    /// 认证Token
+    string token = 5;
+    
+    /// 服务器时间戳
+    int64 server_time = 6;
+}
+
+// ----------------------------------------
+// 心跳相关 (0x0020 - 0x002F)
+// ----------------------------------------
+
+/// 客户端心跳
+message C2S_Heartbeat
+{
+    /// 客户端本地时间戳（毫秒）
+    int64 client_time = 1;
+}
+
+/// 服务器心跳响应
+message S2C_Heartbeat
+{
+    /// 回显的客户端时间戳（用于计算 RTT）
+    int64 client_time = 1;
+    
+    /// 服务器当前时间戳
+    int64 server_time = 2;
+}
+
+// ----------------------------------------
+// 进入世界 (0x0030 - 0x003F)
+// ----------------------------------------
+
+/// 客户端请求进入游戏世界
+message C2S_EnterWorld
+{
+    /// 玩家ID
+    int64 player_id = 1;
+    
+    /// 角色名称
+    string character_name = 2;
+}
+
+/// 服务器响应进入游戏世界
+message S2C_EnterWorld
+{
+    /// 是否成功
+    bool success = 1;
+    
+    /// 玩家ID
+    int64 player_id = 2;
+    
+    /// 出生坐标X
+    float position_x = 3;
+    
+    /// 出生坐标Y
+    float position_y = 4;
+    
+    /// 出生坐标Z
+    float position_z = 5;
+    
+    /// 失败时的错误原因
+    string error_message = 6;
+}
+
+// ----------------------------------------
+// 服务器通知 (0x0100 - 0x01FF)
+// ----------------------------------------
+
+/// 服务器公告
+message S2C_ServerNotice
+{
+    /// 公告内容
+    string notice = 1;
+}
+
+/// 服务器错误
+message S2C_Error
+{
+    /// 错误代码
+    int32 error_code = 1;
+    
+    /// 错误消息
+    string message = 2;
+}
+
+// ----------------------------------------
+// 移动相关 (0x1000 - 0x10FF)
+// ----------------------------------------
+
+/// 客户端移动请求
+message C2S_PlayerMove
+{
+    /// 目标X
+    float x = 1;
+    
+    /// 目标Y
+    float y = 2;
+    
+    /// 目标Z
+    float z = 3;
+    
+    /// 朝向角度（0-360）
+    float yaw = 4;
+    
+    /// 移动类型：0=停止 1=行走 2=跑步 3=跳跃
+    int32 move_type = 5;
+}
+
+/// 服务器广播玩家位置变化
+message S2C_PlayerPosition
+{
+    /// 玩家ID
+    int64 player_id = 1;
+    
+    /// 新坐标X
+    float x = 2;
+    
+    /// 新坐标Y
+    float y = 3;
+    
+    /// 新坐标Z
+    float z = 4;
+    
+    /// 朝向角度
+    float yaw = 5;
+    
+    /// 移动类型
+    int32 move_type = 6;
+}

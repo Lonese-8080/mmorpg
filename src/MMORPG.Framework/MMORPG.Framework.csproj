@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      MMORPG.Framework - 游戏服务端框架基础设施
+      
+      包含：
+      - 日志系统
+      - 配置管理
+      - 网络层
+      - 线程管理
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>MMORPG.Framework</RootNamespace>
+    <AssemblyName>MMORPG.Framework</AssemblyName>
+    
+    <!-- 代码质量设置 -->
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <AnalysisMode>None</AnalysisMode>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    
+    <!-- 文档 -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn),CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 依赖包 -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    
+    <!-- Protobuf 序列化 -->
+    <PackageReference Include="Google.Protobuf" Version="3.30.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- Protobuf 代码生成 -->
+  <ItemGroup>
+    <Protobuf Include="..\..\protos\*.proto" OutputDir="$(ProjectDir)Network\Protobuf" GrpcServices="None" />
+  </ItemGroup>
+
+</Project>

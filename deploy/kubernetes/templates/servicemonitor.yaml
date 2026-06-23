@@ -1,0 +1,23 @@
+{{- if .Values.monitoring.prometheus.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "mmorpg-framework.fullname" . }}
+  labels:
+    {{- include "mmorpg-framework.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheus.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "mmorpg-framework.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: {{ .Values.monitoring.prometheus.path }}
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- end }}

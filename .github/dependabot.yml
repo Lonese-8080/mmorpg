@@ -1,0 +1,59 @@
+# Dependabot 自动依赖更新
+# https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "nuget"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dotnet-runtime:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      benchmarks:
+        patterns:
+          - "BenchmarkDotNet"
+          - "Perfolizer*"
+      test:
+        patterns:
+          - "xunit*"
+          - "coverlet*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "05:00"
+      timezone: "Asia/Shanghai"
+    commit-message:
+      prefix: "ci(actions)"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Asia/Shanghai"
+    commit-message:
+      prefix: "ci(docker)"
+    labels:
+      - "dependencies"
+      - "docker"

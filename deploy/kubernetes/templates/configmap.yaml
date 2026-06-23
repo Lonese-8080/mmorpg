@@ -1,0 +1,33 @@
+# ConfigMap Template
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mmorpg-framework.fullname" . }}-config
+  labels:
+    {{- include "mmorpg-framework.labels" . | nindent 4 }}
+data:
+  appsettings.json: |
+    {
+      "Server": {
+        "Name": "MMORPG Framework",
+        "Version": "{{ .Chart.AppVersion }}"
+      },
+      "Network": {
+        "TcpPort": {{ .Values.app.config.tcpPort }},
+        "HttpPort": {{ .Values.app.config.httpPort }},
+        "PrometheusPort": {{ .Values.app.config.prometheusPort }},
+        "MaxConnections": {{ .Values.app.config.maxConnections }},
+        "HeartbeatTimeoutSeconds": {{ .Values.app.config.heartbeatTimeoutSeconds }},
+        "MessageRetryCount": {{ .Values.app.config.messageRetryCount }}
+      },
+      "GameScheduler": {
+        "TargetFps": {{ .Values.app.config.targetFps }}
+      },
+      "Observability": {
+        "EnableMetrics": {{ .Values.app.config.enableMetrics }},
+        "EnableTracing": {{ .Values.app.config.enableTracing }}
+      }
+    }

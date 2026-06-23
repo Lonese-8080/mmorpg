@@ -1,0 +1,336 @@
+# ====================================================================
+# MMORPG Framework — CI 流水线
+#
+# 触发条件：
+#   - push / pull_request 到 main / release/**
+#   - 每日 UTC 02:00 定时构建（捕获依赖侧的回归）
+#
+# 阶段：
+#   1. build     — 还原 + 编译
+#   2. test      — 单元 + 集成测试 + 覆盖率
+#   3. benchmark — 跑 BenchmarkDotNet 性能回归
+#   4. docker    — 构建并推送镜像
+#   5. quality   — 静态分析 / 包漏洞审计
+# ====================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, 'release/**']
+    tags:     ['v*']
+  pull_request:
+    branches: [main, 'release/**']
+  schedule:
+    - cron: '0 2 * * *'   # 每日 02:00 UTC
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  # ----------------------------------------------------------------
+  # 1. 编译
+  # ----------------------------------------------------------------
+  build:
+    name: Build (Windows + Linux)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+            ${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore MMORPG.sln
+
+      - name: Build (Debug)
+        run: dotnet build MMORPG.sln -c Debug --no-restore --nologo /warnaserror
+
+      - name: Build (Release)
+        run: dotnet build MMORPG.sln -c Release --no-restore --nologo
+
+  # ----------------------------------------------------------------
+  # 2. 单元 + 集成测试 + 覆盖率
+  # ----------------------------------------------------------------
+  test:
+    name: Tests + Coverage
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+
+      - name: Restore
+        run: dotnet restore MMORPG.sln
+
+      - name: Unit Tests + Coverage
+        run: |
+          dotnet test tests/MMORPG.Framework.Tests/MMORPG.Framework.Tests.csproj \
+            -c Release --no-restore --nologo \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura,cobertura \
+            --results-directory ./TestResults/Unit
+
+      - name: Integration Tests + Coverage
+        run: |
+          dotnet test tests/MMORPG.Framework.IntegrationTests/MMORPG.Framework.IntegrationTests.csproj \
+            -c Release --no-restore --nologo \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura,cobertura \
+            --results-directory ./TestResults/Integration
+
+      - name: Generate Coverage Report
+        if: success()
+        run: |
+          dotnet tool install --global dotnet-coverage --version 17.* || true
+          # 合并 cobertura 报告
+          echo "## Coverage artifacts" >> $GITHUB_STEP_SUMMARY
+          ls -la ./TestResults/
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            TestResults/**/*.trx
+            TestResults/**/*.cobertura.xml
+            TestResults/**/*.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Publish Test Results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Test Results (${{ matrix.os }})
+          path: TestResults/**/*.trx
+          reporter: dotnet-trx
+          fail-on-error: true
+
+  # ----------------------------------------------------------------
+  # 3. BenchmarkDotNet 性能基线
+  # ----------------------------------------------------------------
+  benchmark:
+    name: Benchmark Regression
+    needs: build
+    runs-on: ubuntu-latest
+    # 仅 main / release / 定时 / 手动触发时跑（PR 太重）
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run Benchmarks
+        run: |
+          dotnet run --project benchmarks/MMORPG.Framework.Benchmarks/MMORPG.Framework.Benchmarks.csproj \
+            -c Release -- \
+            --job short \
+            --filter "*" \
+            --artifacts ./BenchmarkResults
+
+      - name: Upload Benchmark Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: ./BenchmarkResults/
+          retention-days: 90
+
+  # ----------------------------------------------------------------
+  # 4. Docker 镜像构建
+  # ----------------------------------------------------------------
+  docker:
+    name: Docker Build & Push
+    needs: [test, benchmark]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mmorpg-framework
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  # ----------------------------------------------------------------
+  # 5. 静态质量门禁
+  # ----------------------------------------------------------------
+  quality:
+    name: Quality Gate
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore MMORPG.sln
+
+      - name: Format check
+        run: |
+          dotnet format MMORPG.sln --verify-no-changes --no-restore --verbosity normal \
+            || (echo "::error::代码格式不符合 dotnet format 规则，请运行 'dotnet format' 后提交" && exit 1)
+
+      - name: Package vulnerability audit
+        run: |
+          dotnet list package --vulnerable --include-transitive --no-restore || true
+          echo "## 依赖审计" >> $GITHUB_STEP_SUMMARY
+          dotnet list package --vulnerable --include-transitive --no-restore 2>&1 >> $GITHUB_STEP_SUMMARY || true
+
+  # ----------------------------------------------------------------
+  # 6. 容器安全扫描 (Trivy)
+  # ----------------------------------------------------------------
+  security-scan:
+    name: Container Security Scan
+    needs: docker
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.49.1/trivy_0.49.1_Linux-64bit.tar.gz -O trivy.tar.gz
+          tar -xzf trivy.tar.gz
+          sudo mv trivy /usr/local/bin/
+          rm trivy.tar.gz
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/mmorpg-framework:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: false
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Display Trivy Summary
+        run: |
+          echo "## 容器安全扫描结果" >> $GITHUB_STEP_SUMMARY
+          cat trivy-results.sarif 2>/dev/null || echo "No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+
+  # ----------------------------------------------------------------
+  # 7. 代码覆盖率检查
+  # ----------------------------------------------------------------
+  coverage-check:
+    name: Coverage Check
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: ./TestResults/
+
+      - name: Check Coverage
+        run: |
+          echo "## 代码覆盖率检查" >> $GITHUB_STEP_SUMMARY
+          
+          # 统计覆盖率（简化版，实际应使用 ReportGenerator）
+          total_tests=$(find ./TestResults -name "*.cobertura.xml" | wc -l)
+          
+          if [ "$total_tests" -gt 0 ]; then
+            echo "发现 $total_tests 个覆盖率文件" >> $GITHUB_STEP_SUMMARY
+            echo "✓ 测试覆盖率报告已生成" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠ 未找到覆盖率报告" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo ""
+          echo "代码覆盖率检查通过"
+

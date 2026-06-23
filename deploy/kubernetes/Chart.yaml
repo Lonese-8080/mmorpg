@@ -1,0 +1,31 @@
+# MMORPG Framework Helm Chart
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+apiVersion: v2
+name: mmorpg-framework
+description: MMORPG Framework - A high-performance game server framework for .NET
+
+type: application
+
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - mmorpg
+  - game-server
+  - framework
+  - dotnet
+
+maintainers:
+  - name: MMORPG Framework Contributors
+    email: mmorpg@example.com
+
+home: https://github.com/your-org/mmorpg
+
+sources:
+  - https://github.com/your-org/mmorpg
+
+annotations:
+  category: Game Development
+  license: MIT

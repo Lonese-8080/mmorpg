@@ -1,0 +1,104 @@
+# Deployment Template
+# Copyright (c) 2024-2026 MMORPG Framework Contributors
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mmorpg-framework.fullname" . }}
+  labels:
+    {{- include "mmorpg-framework.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mmorpg-framework.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "mmorpg-framework.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mmorpg-framework.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            - name: tcp
+              containerPort: {{ .Values.service.tcpPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.prometheusPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: TCP_PORT
+              value: "{{ .Values.app.config.tcpPort }}"
+            - name: HTTP_PORT
+              value: "{{ .Values.app.config.httpPort }}"
+            - name: PROMETHEUS_PORT
+              value: "{{ .Values.app.config.prometheusPort }}"
+            - name: TARGET_FPS
+              value: "{{ .Values.app.config.targetFps }}"
+            - name: MAX_CONNECTIONS
+              value: "{{ .Values.app.config.maxConnections }}"
+            - name: HEARTBEAT_TIMEOUT
+              value: "{{ .Values.app.config.heartbeatTimeoutSeconds }}"
+            - name: ENABLE_METRICS
+              value: "{{ .Values.app.config.enableMetrics }}"
+            - name: ENABLE_TRACING
+              value: "{{ .Values.app.config.enableTracing }}"
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/config
+              readOnly: true
+            - name: app-logs
+              mountPath: /app/logs
+          {{- with .Values.volumes }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ include "mmorpg-framework.fullname" . }}-config
+        - name: app-logs
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "mmorpg-framework.fullname" . }}-logs
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
