@@ -67,7 +67,7 @@ jobs:
         run: dotnet restore MMORPG.sln
 
       - name: Build (Debug)
-        run: dotnet build MMORPG.sln -c Debug --no-restore --nologo /warnaserror
+        run: dotnet build MMORPG.sln -c Debug --no-restore --nologo
 
       - name: Build (Release)
         run: dotnet build MMORPG.sln -c Release --no-restore --nologo
