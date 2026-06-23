@@ -18,7 +18,7 @@ public class BenchmarkConfig : ManualConfig
         AddJob(Job.Default
             .WithWarmupCount(3)      // 预热次数
             .WithIterationCount(10)  // 迭代次数
-            .WithMinIterationTime(TimeInterval.Millisecond(100)) // 最小迭代时间 100ms
+            .WithMinIterationTime(TimeInterval.FromMilliseconds(100)) // 最小迭代时间 100ms
         );
     }
 }

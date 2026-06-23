@@ -78,7 +78,7 @@ public class SnowflakeIdBenchmarks
 
         for (int i = 0; i < 100000; i++)
         {
-            ids.Add(_generator!.NextId());
+            ids.Add(_generator!.NewId());
         }
 
         return ids.Count == 100000;
