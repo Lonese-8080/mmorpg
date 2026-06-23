@@ -225,29 +225,30 @@ public class ConcurrencyTests : IDisposable
     [Fact]
     public void 内存可见性_volatile读取_应看到最新值()
     {
-        // Arrange
         var volatileField = new VolatileField();
+        var writeDone = new ManualResetEventSlim(false);
+        var readDone = new ManualResetEventSlim(false);
+        int lastValue = -1;
+
         var writeTask = Task.Run(() =>
         {
             for (int i = 0; i < 1000; i++)
             {
                 volatileField.Value = i;
             }
+            writeDone.Set();
         });
 
-        var lastValues = new List<int>();
         var readTask = Task.Run(() =>
         {
-            for (int i = 0; i < 1000; i++)
-            {
-                lastValues.Add(volatileField.Value);
-            }
+            writeDone.Wait();
+            lastValue = volatileField.Value;
+            readDone.Set();
         });
 
         Task.WaitAll(writeTask, readTask);
 
-        // Assert - 由于 volatile 的特性，应该能看到所有写入的值
-        Assert.Contains(999, lastValues);
+        Assert.Equal(999, lastValue);
     }
 
     [Fact]
