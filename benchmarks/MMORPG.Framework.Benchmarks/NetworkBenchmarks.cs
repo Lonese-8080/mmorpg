@@ -34,8 +34,7 @@ public class NetworkBenchmarks
 
         _noticeMessage = new S2C_ServerNotice
         {
-            Content = new string('X', 1000),
-            Title = "Server Notice Title"
+            Notice = new string('X', 1000)  // 公告内容
         };
 
         _serializedLogin = MessageSerializer.Serialize(_loginMessage);

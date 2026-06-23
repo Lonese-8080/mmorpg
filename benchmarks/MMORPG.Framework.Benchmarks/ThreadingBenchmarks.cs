@@ -34,7 +34,7 @@ public class SnowflakeIdBenchmarks
         long sum = 0;
         for (int i = 0; i < 1000; i++)
         {
-            sum += _generator!.NextId();
+            sum += _generator!.NewId();
         }
         return sum;
     }
@@ -51,7 +51,7 @@ public class SnowflakeIdBenchmarks
                 long sum = 0;
                 for (int j = 0; j < 100; j++)
                 {
-                    sum += _generator!.NextId();
+                    sum += _generator!.NewId();
                 }
                 return sum;
             }));

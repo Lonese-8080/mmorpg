@@ -3,6 +3,7 @@
 
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using Perfolizer.Horology;
 
 namespace MMORPG.Framework.Benchmarks;
 
@@ -17,7 +18,7 @@ public class BenchmarkConfig : ManualConfig
         AddJob(Job.Default
             .WithWarmupCount(3)      // 预热次数
             .WithIterationCount(10)  // 迭代次数
-            .WithMinIterationTime(100) // 最小迭代时间
+            .WithMinIterationTime(TimeInterval.Millisecond(100)) // 最小迭代时间 100ms
         );
     }
 }
