@@ -73,7 +73,7 @@ jobs:
         run: dotnet build MMORPG.sln -c Release --no-restore --nologo
 
   # ----------------------------------------------------------------
-  # 2. 单元 + 集成测试 + 覆盖率
+  # 2. 单元 + 集成测试 + 覆盖率（质量门禁）
   # ----------------------------------------------------------------
   test:
     name: Tests + Coverage
@@ -104,7 +104,7 @@ jobs:
             -c Release --no-restore --nologo \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=../../TestResults/coverage/ \
+            -p:CoverletOutput=../../TestResults/coverage/unit/ \
             --results-directory ./TestResults/Unit \
             --logger "trx;LogFileName=UnitTests.trx"
 
@@ -114,23 +114,55 @@ jobs:
             -c Release --no-restore --nologo \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=../../TestResults/integration-coverage/ \
+            -p:CoverletOutput=../../TestResults/coverage/integration/ \
             --results-directory ./TestResults/Integration \
             --logger "trx;LogFileName=IntegrationTests.trx"
 
-      - name: Generate Coverage Report
-        if: success()
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Merge Coverage Reports
         run: |
-          # 查找所有 cobertura 报告文件
-          echo "查找覆盖率文件..."
-          find ./TestResults -name "*.cobertura.xml" -type f 2>/dev/null || echo "未找到 cobertura 文件"
+          reportgenerator \
+            -reports:"./TestResults/coverage/**/*.cobertura.xml" \
+            -targetdir:"./TestResults/coverage/merged" \
+            -reporttypes:"Html;Cobertura;Badges" \
+            -title:"MMORPG Framework 代码覆盖率"
+
+      - name: Coverage Quality Gate
+        run: |
+          COVERAGE_FILE="./TestResults/coverage/merged/Cobertura.xml"
           
-          # 显示目录结构
-          echo "TestResults 目录结构:"
-          ls -R ./TestResults/ 2>/dev/null || echo "目录为空"
+          if [ ! -f "$COVERAGE_FILE" ]; then
+            echo "::error::覆盖率报告不存在，测试失败"
+            exit 1
+          fi
           
-          # 尝试合并报告（如果有多个）
-          echo "## Coverage artifacts" >> $GITHUB_STEP_SUMMARY
+          # 从 Cobertura XML 中提取行覆盖率
+          LINE_RATE=$(grep -oP 'line-rate="\K[^"]+' "$COVERAGE_FILE" | head -1)
+          COVERAGE_PERCENT=$(echo "$LINE_RATE * 100" | bc -l | xargs printf "%.2f")
+          
+          echo "当前行覆盖率: ${COVERAGE_PERCENT}%"
+          echo "最低要求: 25%"
+          
+          # 覆盖率阈值：25%，低于则失败
+          THRESHOLD=25
+          PASS=$(echo "$COVERAGE_PERCENT >= $THRESHOLD" | bc -l)
+          
+          if [ "$PASS" -eq 1 ]; then
+            echo "✅ 覆盖率质量门禁通过 (${COVERAGE_PERCENT}% >= ${THRESHOLD}%)"
+            echo "## 代码覆盖率" >> $GITHUB_STEP_SUMMARY
+            echo "- **行覆盖率**: ${COVERAGE_PERCENT}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **阈值**: ${THRESHOLD}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **结果**: ✅ 通过" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "::error::覆盖率质量门禁未通过: ${COVERAGE_PERCENT}% < ${THRESHOLD}%"
+            echo "## 代码覆盖率" >> $GITHUB_STEP_SUMMARY
+            echo "- **行覆盖率**: ${COVERAGE_PERCENT}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **阈值**: ${THRESHOLD}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **结果**: ❌ 未通过" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
 
       - name: Upload Test Results
         if: always()
@@ -139,9 +171,8 @@ jobs:
           name: test-results-${{ github.run_id }}
           path: |
             TestResults/**/*.trx
-            TestResults/**/*.cobertura.xml
-            TestResults/**/*.log
-          if-no-files-found: ignore
+            TestResults/coverage/merged/**
+          if-no-files-found: error
           retention-days: 30
 
       - name: Publish Test Results
@@ -151,7 +182,7 @@ jobs:
           name: Test Results
           path: TestResults/**/*.trx
           reporter: dotnet-trx
-          fail-on-error: false
+          fail-on-error: true
 
   # ----------------------------------------------------------------
   # 3. BenchmarkDotNet 性能基线
@@ -323,43 +354,4 @@ jobs:
           else
             echo "⚠ 未生成扫描结果文件" >> $GITHUB_STEP_SUMMARY
           fi
-
-  # ----------------------------------------------------------------
-  # 7. 代码覆盖率检查
-  # ----------------------------------------------------------------
-  coverage-check:
-    name: Coverage Check
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Download Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results-${{ github.run_id }}
-          path: ./TestResults/
-
-      - name: Check Coverage
-        run: |
-          echo "## 代码覆盖率检查" >> $GITHUB_STEP_SUMMARY
-          
-          # 统计覆盖率（简化版，实际应使用 ReportGenerator）
-          total_tests=$(find ./TestResults -name "*.cobertura.xml" | wc -l)
-          
-          if [ "$total_tests" -gt 0 ]; then
-            echo "发现 $total_tests 个覆盖率文件" >> $GITHUB_STEP_SUMMARY
-            echo "✓ 测试覆盖率报告已生成" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠ 未找到覆盖率报告" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo ""
-          echo "代码覆盖率检查通过"
 

@@ -7,16 +7,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <!-- 禁用 xUnit 分析器警告 - 测试代码中允许使用 .Wait() -->
     <NoWarn>$(NoWarn);xUnit1031;xUnit1032</NoWarn>
-    <!-- Coverlet 覆盖率配置 -->
-    <CollectCoverage>true</CollectCoverage>
-    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-    <CoverletOutput>../TestResults/coverage</CoverletOutput>
-    <ExcludeByFile>**/AssemblyInfo.cs</ExcludeByFile>
-    <ExcludeByAttribute>Obsolete,GeneratedCode,CompilerGenerated</ExcludeByAttribute>
-    <!-- 测试结果输出目录 -->
-    <TestResultsDirectory>../TestResults</TestResultsDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,12 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <!-- Coverlet 代码覆盖率 -->
-    <PackageReference Include="coverlet.collector" Version="6.1.5">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="coverlet.msbuild" Version="6.1.5">
+    <PackageReference Include="coverlet.msbuild" Version="6.0.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
