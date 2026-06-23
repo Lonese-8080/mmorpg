@@ -22,10 +22,10 @@ public class ValidationResult
         FieldName = fieldName;
     }
 
-    public static ValidationResult Success(string fieldName) => 
+    public static ValidationResult Success(string fieldName) =>
         new(true, null, fieldName);
 
-    public static ValidationResult Fail(string fieldName, string errorMessage) => 
+    public static ValidationResult Fail(string fieldName, string errorMessage) =>
         new(false, errorMessage, fieldName);
 }
 
@@ -48,7 +48,7 @@ public class RequiredAttribute : ValidationAttribute
     {
         if (value == null)
             return ValidationResult.Fail(fieldName, "必填字段");
-        
+
         if (value is string str && string.IsNullOrWhiteSpace(str))
             return ValidationResult.Fail(fieldName, "必填字段不能为空");
 
@@ -82,7 +82,7 @@ public class StringLengthAttribute : ValidationAttribute
         {
             if (str.Length < MinLength)
                 return ValidationResult.Fail(fieldName, $"长度不能小于 {MinLength}");
-            
+
             if (str.Length > MaxLength)
                 return ValidationResult.Fail(fieldName, $"长度不能大于 {MaxLength}");
         }
@@ -165,7 +165,7 @@ public static class Validator
         foreach (var rule in rules)
         {
             object? value = rule.Property?.GetValue(obj) ?? rule.Field?.GetValue(obj);
-            
+
             foreach (var attr in rule.Attributes)
             {
                 var result = attr.Validate(value, rule.FieldName);
@@ -186,7 +186,7 @@ public static class Validator
     public static bool TryValidate(object obj, out string? errorMessage)
     {
         var results = Validate(obj);
-        
+
         if (results.Count == 0)
         {
             errorMessage = null;

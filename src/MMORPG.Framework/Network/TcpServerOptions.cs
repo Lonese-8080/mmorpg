@@ -101,7 +101,7 @@ public class TcpServerOptions
     /// 
     /// 可选值：Tls12, Tls13
     /// </summary>
-    public System.Security.Authentication.SslProtocols TlsProtocol { get; set; } = 
+    public System.Security.Authentication.SslProtocols TlsProtocol { get; set; } =
         System.Security.Authentication.SslProtocols.Tls12;
 
     /// <summary>

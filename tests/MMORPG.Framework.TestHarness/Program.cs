@@ -64,7 +64,7 @@ class Program
     private static readonly List<TestResult> _results = new();
     private static readonly object _resultsLock = new();
     private static TcpServer? _server;
-    
+
     private static ICounter? _testTotalCounter;
     private static ICounter? _testPassedCounter;
     private static ICounter? _testFailedCounter;
@@ -146,23 +146,23 @@ class Program
     {
         if (int.TryParse(Environment.GetEnvironmentVariable("TCP_PORT"), out var tcpPort))
             _options.TcpPort = tcpPort;
-        
+
         if (int.TryParse(Environment.GetEnvironmentVariable("HTTP_PORT"), out var httpPort))
             _options.HttpPort = httpPort;
-        
+
         if (int.TryParse(Environment.GetEnvironmentVariable("TEST_CONNECTIONS"), out var connections))
             _options.TestConnections = connections;
-        
+
         if (int.TryParse(Environment.GetEnvironmentVariable("MESSAGES_PER_CONNECTION"), out var messages))
             _options.MessagesPerConnection = messages;
-        
+
         if (int.TryParse(Environment.GetEnvironmentVariable("TEST_TIMEOUT_SECONDS"), out var timeout))
             _options.TestTimeoutSeconds = timeout;
-        
+
         if (int.TryParse(Environment.GetEnvironmentVariable("TEST_MAX_RETRIES"), out var retries))
             _options.MaxRetries = retries;
 
-        Logger.Info("TestHarness", "配置加载完成: TCP={0}, HTTP={1}, Timeout={2}s, Retries={3}", 
+        Logger.Info("TestHarness", "配置加载完成: TCP={0}, HTTP={1}, Timeout={2}s, Retries={3}",
             _options.TcpPort, _options.HttpPort, _options.TestTimeoutSeconds, _options.MaxRetries);
     }
 
@@ -303,7 +303,7 @@ class Program
         {
             snapshot = _results.ToList();
         }
-        
+
         var summary = new
         {
             total = snapshot.Count,
@@ -412,7 +412,7 @@ class Program
     private static async Task RunWithTimeoutAndRetry(Func<Task> testFunc, string testName)
     {
         var timeout = TimeSpan.FromSeconds(_options.TestTimeoutSeconds);
-        
+
         for (int retry = 0; retry <= _options.MaxRetries; retry++)
         {
             try
@@ -420,25 +420,25 @@ class Program
                 var cts = new CancellationTokenSource(timeout);
                 var task = testFunc();
                 var completedTask = await Task.WhenAny(task, Task.Delay(timeout));
-                
+
                 if (completedTask == task)
                 {
                     await task;
                     return;
                 }
-                
+
                 throw new TimeoutException($"测试 {testName} 超时 ({timeout.TotalSeconds}s)");
             }
             catch (Exception ex)
             {
                 Logger.Warning("TestHarness", "[{0}] 尝试 {1}/{2} 失败: {3}", testName, retry + 1, _options.MaxRetries + 1, ex.Message);
-                
+
                 if (retry >= _options.MaxRetries)
                 {
                     RecordResult(testName, false, (long)timeout.TotalMilliseconds, $"最终失败: {ex.Message}");
                     return;
                 }
-                
+
                 await Task.Delay(TimeSpan.FromMilliseconds(100 * (retry + 1)));
             }
         }
@@ -473,7 +473,7 @@ class Program
 
             var filePath = Path.Combine(logsDir, $"test_results_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}.json");
             await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true }));
-            
+
             Logger.Info("TestHarness", "测试结果已保存: {0}", filePath);
         }
         catch (Exception ex)
@@ -1044,19 +1044,19 @@ class Program
     private static void RegisterFrameworkMetrics()
     {
         MetricsCollector.Instance.Enable();
-        
+
         _testTotalCounter = MetricsCollector.Instance.RegisterCounter("framework.test.total", "测试运行总次数");
         _testPassedCounter = MetricsCollector.Instance.RegisterCounter("framework.test.passed", "测试通过次数");
         _testFailedCounter = MetricsCollector.Instance.RegisterCounter("framework.test.failed", "测试失败次数");
         _testDurationHistogram = MetricsCollector.Instance.RegisterHistogram("framework.test.duration_ms", "测试耗时分布");
-        
+
         MetricsCollector.Instance.RegisterGauge("framework.connections", "当前活跃连接数", () => _server?.ConnectionCount ?? 0);
     }
 
     private static void RecordResult(string name, bool passed, long durationMs, string message)
     {
         var result = new TestResult(name, passed, durationMs, message, DateTime.Now);
-        
+
         lock (_resultsLock)
         {
             _results.Add(result);

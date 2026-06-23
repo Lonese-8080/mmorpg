@@ -26,7 +26,7 @@ public class ConcurrencyTests : IDisposable
     {
         // 这是一个负面测试，证明无锁操作会导致问题
         // 实际框架应该使用 AtomicCounter
-        
+
         var counter = 0;
         var tasks = new List<Task>();
 
@@ -206,7 +206,7 @@ public class ConcurrencyTests : IDisposable
         }
 
         Task.WaitAll(producerTasks.ToArray());
-        
+
         // 等待消费者完成
         Task.Delay(500).Wait();
         while (channel.TryRead(out _))

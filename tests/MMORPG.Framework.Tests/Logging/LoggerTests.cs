@@ -64,7 +64,7 @@ public class LoggerTests
         // Act & Assert
         var exception = Record.Exception(() =>
         {
-            MMORPG.Framework.Logging.Logger.Error("Test", testException, 
+            MMORPG.Framework.Logging.Logger.Error("Test", testException,
                 "发生错误");
         });
 

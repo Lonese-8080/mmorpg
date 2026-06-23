@@ -311,7 +311,7 @@ public class TcpServer : IAsyncDisposable, IDisposable
 
                 // 启用证书热加载
                 TlsHelper.EnableCertificateHotReload(_options);
-                
+
                 // 订阅证书更新事件
                 TlsHelper.CertificateUpdated += OnCertificateUpdated;
 
@@ -900,16 +900,16 @@ public class TcpServer : IAsyncDisposable, IDisposable
     private void OnCertificateUpdated(object? sender, X509Certificate2 newCertificate)
     {
         Logger.Info("Network", "TLS 证书已更新，新证书主题: {0}", newCertificate.Subject);
-        
+
         // 更新服务器证书引用
         _serverCertificate = newCertificate;
-        
+
         // 更新证书热加载次数指标
         try
         {
             var reloadCountGauge = MetricsCollector.Instance.GetGauge("tls.cert_reload_count");
             var currentValue = MetricsCollector.Instance.GetValue("tls.cert_reload_count") ?? 0;
-            
+
             if (reloadCountGauge != null)
             {
                 reloadCountGauge.Set(currentValue + 1);

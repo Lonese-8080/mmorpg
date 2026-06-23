@@ -452,7 +452,7 @@ public class Session
             while (!_disconnected)
             {
                 var bytesRead = await _sslStream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length).ConfigureAwait(false);
-                
+
                 if (bytesRead == 0)
                 {
                     Disconnect("对方关闭连接");
