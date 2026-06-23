@@ -10,7 +10,7 @@
       - 网络层
       - 线程管理
     -->
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <LangVersion>13</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -30,8 +30,8 @@
 
   <ItemGroup>
     <!-- 依赖包 -->
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     
     <!-- Protobuf 序列化 -->
     <PackageReference Include="Google.Protobuf" Version="3.30.2" />

@@ -12,7 +12,7 @@
 #   docker compose up -d
 #   docker compose logs -f
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # 复制所有项目文件
