@@ -30,8 +30,8 @@
 
   <ItemGroup>
     <!-- 依赖包 -->
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     
     <!-- Protobuf 序列化 -->
     <PackageReference Include="Google.Protobuf" Version="3.30.2" />
