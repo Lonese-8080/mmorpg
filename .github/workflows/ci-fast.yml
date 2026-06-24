@@ -1,0 +1,152 @@
+# ====================================================================
+# MMORPG Framework — 快速 CI 流水线
+#
+# 用途：只跑核心模块测试，快速验证新增代码（1-2分钟）
+#
+# 触发条件：
+#   - push / pull_request 到 main / release/**
+# ====================================================================
+
+name: CI - Fast
+
+on:
+  push:
+    branches: [main, 'release/**']
+    tags: ['v*']
+  pull_request:
+    branches: [main, 'release/**']
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+
+      - name: Restore
+        run: dotnet restore MMORPG.sln
+
+      - name: Build
+        run: dotnet build MMORPG.sln -c Debug --no-restore --nologo
+
+  test-core:
+    name: Core Modules Tests
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+
+      - name: Restore
+        run: dotnet restore MMORPG.sln
+
+      # 只跑核心模块的测试（断路器、重试、超时、会话、心跳、消息重试、崩溃报告、健康检查）
+      # 这些是新增的测试，覆盖率最高
+      - name: Core Tests
+        run: |
+          dotnet test tests/MMORPG.Framework.Tests/MMORPG.Framework.Tests.csproj \
+            -c Debug --no-restore --nologo \
+            --filter "FullyQualifiedName~Resilience|FullyQualifiedName~HeartbeatManagerTests|FullyQualifiedName~MessageRetryQueueTests|FullyQualifiedName~SessionTests|FullyQualifiedName~CrashReportingTests|FullyQualifiedName~HealthCheckStatusTests" \
+            --logger "trx;LogFileName=CoreTests.trx" \
+            -- -parallel none
+
+      - name: Upload Core Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-results-${{ github.run_id }}
+          path: "**/*.trx"
+          if-no-files-found: error
+          retention-days: 7
+
+  docker-fast:
+    name: Docker Build
+    needs: test-core
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mmorpg-framework
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          timeout: '5m'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
