@@ -77,11 +77,15 @@ public sealed class HealthEndpoint : IDisposable
 
     /// <summary>
     /// 启动 HTTP 监听（非阻塞）
+    /// 
+    /// 注意：在 Windows 上如果没有管理员权限，HttpListener 可能启动失败。
+    /// 此时会打警告并返回 false，不会抛出异常，程序可以继续运行（仅健康检查不可用）。
     /// </summary>
-    public void Start()
+    /// <returns>true=启动成功，false=启动失败（已降级）</returns>
+    public bool Start()
     {
         if (_started || _disposed)
-            return;
+            return _started;
 
         try
         {
@@ -89,14 +93,16 @@ public sealed class HealthEndpoint : IDisposable
         }
         catch (HttpListenerException ex)
         {
-            Logger.Error("Observability", ex,
-                "HealthEndpoint 启动失败: Port={0}（在 Windows 上可能需要以管理员身份运行或使用 netsh http add urlacl）", _port);
-            throw;
+            Logger.Warning("Observability",
+                "HealthEndpoint 启动失败（已降级）: Port={0}, 错误={1}（Windows 上可能需要以管理员身份运行，或执行: netsh http add urlacl url=http://+:{0}/ user=Everyone）",
+                _port, ex.Message);
+            return false;
         }
 
         _started = true;
         _listenTask = Task.Run(ListenLoopAsync, _cts.Token);
         Logger.Info("Observability", "HealthEndpoint 已启动: {0}{1}", _prefix, HealthPath);
+        return true;
     }
 
     /// <summary>
